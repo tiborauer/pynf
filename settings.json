@@ -1,0 +1,16 @@
+{
+	"DISPLAY": "Lenovo T2424pA:1:1200x900",
+	"DAYTIME": [8,19],
+	"STAGE": {
+		"Gravity": 1e-05,
+		"Floor_Height": 0.1,
+		"Floor_Cycle": 24,
+		"nTubes": 1,
+		"Threshold_Size": [0.05,0.1],
+		"Text_Size": 0.1
+	},
+	"SIMULATE": 1,
+	"T_BIRDtoTUBE": 15,
+	"SHAPING": 1,
+	"BestScore": 3
+}
