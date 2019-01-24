@@ -1,6 +1,6 @@
-from flappybird.game import engine
+from pynfb.flappybird import game
 
-Game = engine('settings.json')
+Game = game.Engine('settings.json')
 
 Game.InitWindow()
 
