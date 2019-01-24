@@ -46,7 +46,7 @@ class engine:
     __Window = None
     __Resolution = None
     __Textures = {}
-    __ExperimentStart = None
+    __ExperimentStart = numpy.inf
     __BirdStart = [0, 0]  # frame, clock
     __FrameDuration = None
     
@@ -88,8 +88,23 @@ class engine:
         im = Image.open(os.path.join(os.path.dirname(os.path.realpath(__file__)),'sprites','Background' + str((t.tm_hour < self.__DAYTIME[0] or t.tm_hour > self.__DAYTIME[1])+1) + '.png'))
         mag = self.__Resolution[1]/im.size[1]
         im = im.resize((int(mag*im.size[0]), int(mag*im.size[1])),Image.BICUBIC)
-        CData = numpy.tile(numpy.array(im),(1,1,int(numpy.ceil(self.__Resolution[0]/im.size[0]))))
-        self.__Textures['Background'] = visual.ImageStim(self.__Window,image=CData,size=self.__Resolution)
+        CData = numpy.tile(numpy.array(im)/255*2-1,(1,int(numpy.ceil(self.__Resolution[0]/im.size[0])),1))
+        self.__Textures['Background'] = visual.ImageStim(self.__Window,image=CData,flipVert=True,size=self.__Resolution,units='pix')
+
+
+        im = Image.open(os.path.join(os.path.dirname(os.path.realpath(__file__)),'sprites','Floor.png'))
+        self.__STAGE['Floor_Height'] = numpy.ceil(self.__Resolution[1]*self.__STAGE['Floor_Height'])
+        mag = numpy.round(self.__STAGE['Floor_Height']/im.size[1])
+        im = im.resize((int(mag*im.size[0]), int(mag*im.size[1])),Image.BICUBIC)
+        CData = numpy.tile(numpy.array(im)/255*2-1,(1,int(numpy.ceil(self.__Resolution[0]/im.size[0]))+1,1)) # leave room for offset
+        self.__STAGE['Floor_Cycle'] *= mag
+        self.__Textures['Floor'] = visual.ImageStim(self.__Window,image=CData,flipVert=True,size=[CData.shape[1],CData.shape[0]],pos=[0,self.__STAGE['Floor_Height']/2-self.__Resolution[1]/2],units='pix')
+
+        self.__STAGE['Text_Size'] *= self.__Resolution[1]
+        self.__Textures['Info'] = visual.TextStim(self.__Window,text='',font='Calibri',height=self.__STAGE['Text_Size'],wrapWidth=self.__Resolution[0],bold=True,color=(-1,-1,-1),pos=[0,self.__STAGE['Text_Size']/2-self.__Resolution[1]/2],units='pix')
+
+        # Bird
+        self.__Bird = BirdClass(self.__Window,glob.glob(os.path.join(os.path.dirname(os.path.realpath(__file__)),'sprites','Bird*.png')))
 
     def CloseWindow(self):
         self.__Window.close()
@@ -97,13 +112,27 @@ class engine:
 
     def Update(self):
 
+        if not(parameters['frameNo']): self.__ExperimentStart = time.time()
+        tFrame = time.time()
+        parameters['frameNo'] += 1
+
+        # Background
         self.__Textures['Background'].draw()
 
+        act = 450; fb = int(self.Clock())
+        parameters['Speed'] = 1
+
+        # Floor
+        self.__Textures['Floor'].pos = [-numpy.mod(parameters['frameNo']*parameters['Speed'], self.__STAGE['Floor_Cycle']), self.__Textures['Floor'].pos[1]]
+        self.__Textures['Floor'].draw()
+
+        self.__Textures['Info'].text = '{:.1f} --> {:d} | {:d}'.format(act,fb,self.Score())
+        self.__Textures['Info'].draw()
+
         self.__Window.flip()
-        core.wait(5)
 
     def Over(self):
-        return True
+        return self.Clock() > 20
 
     def Score(self):
         return 0
@@ -127,11 +156,14 @@ class engine:
         else:
             doUpdate = False
         
+
+        if not(doUpdate): self.__LoadConfig()
+        
         self.__SETTINGS['Initial']['BestScore'] = max(self.__BestScore, self.Score())
 
-        if doUpdate:
-            for f in ['DISPLAY','DAYTIME','STAGE','SIMULATE','SHAPING','BestScore']:
-                self.__SETTINGS['Initial'][f] = getattr(self, f)
-        
         with open(self.__SETTINGS['FileName'],'w') as config:
             json.dump(self.__SETTINGS['Initial'],config)
+
+class BirdClass:
+    def __init__(self,w,pngs):
+        print(pngs)
