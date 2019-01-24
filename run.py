@@ -1,4 +1,4 @@
-from pynfb.flappybird import game
+from pynf.flappybird import game
 
 Game = game.Engine('settings.json')
 
