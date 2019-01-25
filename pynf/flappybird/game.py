@@ -1,6 +1,6 @@
-import time, json, os, glob, numpy
+import time, json, os, glob, numpy, random
 from PIL import Image
-from psychopy import core, visual, monitors, event
+from psychopy import core, visual, monitors, event, sound
 
 from .. import feedback
 
@@ -167,12 +167,12 @@ class Engine:
         self.__Bird.Update(fb)
 
         # Tubes
-        #for t in range(0,self.__STAGE['nTubes']):
-            #self.__Tubes[t].Update
+        for t in range(0,self.__STAGE['nTubes']):
+            self.__Tubes[t].Update()
             # QC: Gap
-            #rect = visual.Rect(win=self.__Window,lineColor='red',lineWidth=3,
-            #    pos=self.__Tubes[t].GapPos,width=self.__Tubes[t].Size[0],height=int(numpy.diff(self.__Tubes[t].Gap)))
-            #rect.draw()
+            rect = visual.Rect(win=self.__Window,lineColor='red',lineWidth=3,
+                pos=self.__Tubes[t].XY,width=self.__Tubes[t].Size[0],height=int(numpy.diff(self.__Tubes[t].GapRange)))
+            rect.draw()
 
         # Threshold
         rect = visual.Rect(win=self.__Window,lineColor='grey',fillColor='grey',
@@ -194,7 +194,22 @@ class Engine:
                 pass
 
     def Over(self):
-        return self.Clock() > 10
+        val = False
+
+        # Collision
+        tubesInProximity = [self.__Bird.XY[0]+self.__Bird.Size[0]/2 >= tube.XY[0]-tube.Size[0]/2 and self.__Bird.XY[0]-self.__Bird.Size[0]/2 <=  tube.XY[0]+tube.Size[0]/2 for tube in self.__Tubes]
+        if any(tubesInProximity):
+            t = [t for t in range(0,self.__STAGE['nTubes']) if tubesInProximity[t]][0]
+            val = (self.__Bird.XY[1]+self.__Bird.Size[1]/2 >= self.__Tubes[t].GapRange[0]) or (self.__Bird.XY[1]-self.__Bird.Size[1]/2 <= self.__Tubes[t].GapRange[1])
+            print('{}-{}: {}-{}'.format(self.__Bird.XY[1],self.__Bird.Size[1]/2,self.__Tubes[t].GapRange[0],self.__Tubes[t].GapRange[1]))
+        
+        # Fall
+        val = val or (self.__Bird.XY[1] - self.__Bird.Size[1]/2 <= self.__STAGE['Floor_Height']-self.__Resolution[1]/2) 
+        
+        # Fly over
+        val = val or (self.__Bird.XY[1] + self.__Bird.Size[1]/2 >= self.__Resolution[1]/2)
+
+        return val
 
     def Score(self):
         return numpy.sum([t.XY[0]+t.Size[0] < self.__Bird.XY[0] for t in self.__Tubes]) + parameters['nTubesPassed']
@@ -241,10 +256,6 @@ class TexClass:
     def __init__(self,w):
         self._Window = w
         self._Resolution = w.size
-    
-    def Update(self):
-        self._Textures[self._iFrame].pos = self.XY
-        self._Textures[self._iFrame].draw()
 
 
 class BirdClass(TexClass):
@@ -254,7 +265,6 @@ class BirdClass(TexClass):
     Jump_Duration = 2 # no further jump or fall is possible within (sec)
 
     __dY = 0
-    __JumpY = None
 
     __FlapSpeed = 0.1
         
@@ -277,9 +287,9 @@ class BirdClass(TexClass):
             for i in im]
 
     def Update(self,fb):
-        oY = 0; angle = 0
-
-        print(self.isJumping())
+        
+        oY = 0
+        angle = 0
 
         self._iFrame = numpy.mod(int(numpy.ceil(parameters['frameNo']*(parameters['Speed']+0.5)*self.__FlapSpeed))-1,len(self._Textures))
         if not(fb) and not(self.isJumping()): # Oscillate
@@ -287,20 +297,21 @@ class BirdClass(TexClass):
             oY = oY[int(numpy.mod(numpy.ceil(parameters['frameNo']*0.5*self.__FlapSpeed*self.__Oscil_toFlapRatio)-1,len(oY)))]
             self.dY = 0
             self.JumpOnset = None
-            self.XY[1] = oY
         else:
             if fb > 0: # Jump
                 if not(self.isJumping()):
                     self.JumpOnset = parameters['frameNo']
-                    self.__JumpY = self.XY[1]
-                    self.__dY = -self._Resolution[1]*(self.Jump_Duration*parameters['FPS']()+1)*parameters['Gravity'] # -self._Resolution[1]*(self.Jump_Duration*parameters['FPS']()/2+1)*parameters['Gravity'] 
+                    self.__dY = self._Resolution[1]*(self.Jump_Duration*parameters['FPS']()+1)*parameters['Gravity'] # -self._Resolution[1]*(self.Jump_Duration*parameters['FPS']()/2+1)*parameters['Gravity'] 
             elif fb < 0:
                 self.JumpOnset = None
 
             self.__dY -= self._Resolution[1]*parameters['Gravity']
-            self.XY[1] = self.__dY
+            self.XY[1] += self.__dY
+            angle = min(-self.__dY*self.__Angle_toSpeed, 90)
         
-        super().Update()
+        self._Textures[self._iFrame].pos = [self.XY[0],self.XY[1]+oY]
+        self._Textures[self._iFrame].ori = angle
+        self._Textures[self._iFrame].draw()
     
     def isJumping(self):
         return not(self.JumpOnset is None) and (parameters['frameNo'] <= (self.JumpOnset+self.Jump_Duration*parameters['FPS']()))
@@ -309,26 +320,49 @@ class BirdClass(TexClass):
 class TubeClass(TexClass):
 
     Size = [0.1]
-    Gap = [0, 0]
+    GapRange = [0, 0]
 
+    __Gap = [0, 0]
     __Max_VOffset = 1 # relative to gap, also a jitter between re-occurences of tubes
-    __VOffset = 0
-    
-    @property
-    def GapPos(self):
-        return [self.XY[0]+self.Size[0]/2, numpy.mean(self.Gap)+self.__VOffset]
     
     def __init__(self,w,pngs,gap,posX,floorY):
         super().__init__(w)
 
-        self.__Max_VOffset = self.__Max_VOffset*gap
+        self.__Gap = gap
+        self.__Max_VOffset = self.__Max_VOffset*self.__Gap
 
-        tubeX = numpy.ceil(self._Resolution[0]*self.Size[0])
+        tubeW = int(numpy.ceil(self._Resolution[0]*self.Size[0]))
         im = [Image.open(f) for f in pngs]
-        mag = numpy.round(tubeX/im[0].size[0])
+        mag = tubeW/im[0].size[0]
         im = [i.resize((int(mag*im[0].size[0]), int(mag*im[0].size[1])),Image.BICUBIC) for i in im]
-        imGap = Image.fromarray(numpy.zeros((gap,im[0].size[1],4)),'RGBA') 
+        
+        # create scaled tube
+        ext = int(numpy.ceil(self._Resolution[1] - floorY + self.__Max_VOffset - (im[0].size[1]*2+self.__Gap)/2))
+        tubeH = int(numpy.ceil(im[0].size[1]*2+self.__Gap+ext*2))
 
-        ext = numpy.ceil(((self._Resolution[1] - floorY + self.__Max_VOffset) - (im[0].size[1]*2+gap)) / 2)
+        CData = Image.new('RGBA', (tubeW, tubeH))
+        
+        imExt = im[0].crop((0,0,im[0].size[0],1))
+        for i in range(0,ext):
+            CData.paste(imExt,(0,i))
+            CData.paste(imExt,(0,tubeH-1-i))
+        
+        CData.paste(im[0],(0,ext))
+        CData.paste(im[1],(0,ext+im[0].size[1]+self.__Gap))
 
+        self.Size = list(CData.size)
+        self.XY = [self._Resolution[0]/2+self.Size[0]/2,random.randint(0,self.__Max_VOffset)]
+        self._Textures = visual.ImageStim(self._Window,CData,size=self.Size,pos=self.XY,units='pix')
+        self.GapRange = [self.XY[1]+self.__Gap/2, self.XY[1]-self.__Gap/2]
+    
+    def Update(self):
+        self.XY[0] -= parameters['Speed']
+        if self.XY[0] < -(self._Resolution[0]+self.Size[0])/2:
+            self.XY[0] = self._Resolution[0]/2+self.Size[0]/2 + random.randint(0,self.__Max_VOffset)    # shift back to the beginning + jitter
+            self.XY[1] = random.randint(0,self.__Max_VOffset)                                           # recalculate VOffset
+            self.GapRange = [self.XY[1]+self.__Gap/2, self.XY[1]-self.__Gap/2]
+            parameters['nTubesPassed'] += 1                                                             # correct for tubes passed by bird
+        
+        self._Textures.pos = self.XY
+        self._Textures.draw()
 
