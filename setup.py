@@ -7,7 +7,7 @@ setup(
     author_email='tibor.auer@gmail.com',
     
     packages=['pynf'],
-    install_requires=[],
+    install_requires=['numpy','scipy','matplotlib'],
     
     version='0.1',
     license='GPL-3.0',
