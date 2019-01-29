@@ -170,9 +170,9 @@ class Engine:
         for t in range(0,self.__STAGE['nTubes']):
             self.__Tubes[t].Update()
             # QC: Gap
-            rect = visual.Rect(win=self.__Window,lineColor='red',lineWidth=3,
-                pos=self.__Tubes[t].XY,width=self.__Tubes[t].Size[0],height=int(numpy.diff(self.__Tubes[t].GapRange)))
-            rect.draw()
+            # rect = visual.Rect(win=self.__Window,lineColor='red',lineWidth=3,
+            #     pos=self.__Tubes[t].XY,width=self.__Tubes[t].Size[0],height=int(numpy.diff(self.__Tubes[t].GapRange)))
+            # rect.draw()
 
         # Threshold
         rect = visual.Rect(win=self.__Window,lineColor='grey',fillColor='grey',
@@ -201,7 +201,7 @@ class Engine:
         if any(tubesInProximity):
             t = [t for t in range(0,self.__STAGE['nTubes']) if tubesInProximity[t]][0]
             val = (self.__Bird.XY[1]+self.__Bird.Size[1]/2 >= self.__Tubes[t].GapRange[0]) or (self.__Bird.XY[1]-self.__Bird.Size[1]/2 <= self.__Tubes[t].GapRange[1])
-            print('{}-{}: {}-{}'.format(self.__Bird.XY[1],self.__Bird.Size[1]/2,self.__Tubes[t].GapRange[0],self.__Tubes[t].GapRange[1]))
+            # QC: print('{}-{}: {}-{}'.format(self.__Bird.XY[1],self.__Bird.Size[1]/2,self.__Tubes[t].GapRange[0],self.__Tubes[t].GapRange[1]))
         
         # Fall
         val = val or (self.__Bird.XY[1] - self.__Bird.Size[1]/2 <= self.__STAGE['Floor_Height']-self.__Resolution[1]/2) 
