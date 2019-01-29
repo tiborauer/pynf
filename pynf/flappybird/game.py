@@ -178,6 +178,11 @@ class Engine:
         rect = visual.Rect(win=self.__Window,lineColor='grey',fillColor='grey',
             pos=[self.__STAGE['Threshold_Size'][0]/2-self.__Resolution[0]/2, self.__dThreshold/2],width=self.__STAGE['Threshold_Size'][0],height=self.__Feedback.getPlateauX()*2)
         rect.draw()
+
+        # Activation
+        rect = visual.Rect(win=self.__Window,lineColor='red',fillColor='red',
+            pos=[self.__STAGE['Threshold_Size'][0]/2-self.__Resolution[0]/2, act],width=self.__STAGE['Threshold_Size'][0],height=self.__Resolution[1]/100)
+        rect.draw()
         
         # Floor
         self.__Textures['Floor'].pos = [-numpy.mod(parameters['frameNo']*parameters['Speed'], self.__STAGE['Floor_Cycle']), self.__Textures['Floor'].pos[1]]
