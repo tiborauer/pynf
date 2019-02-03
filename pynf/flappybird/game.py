@@ -12,6 +12,12 @@ parameters = {
     'nTubesPassed': 0
 }
 
+fbInfo = {
+    'fbTime': None,
+    'Activation': 0,
+    'fbVal': 0
+}
+
 class Engine:
 
     ## Private
@@ -26,12 +32,10 @@ class Engine:
         'Threshold_Size': [0.05, 0.1],
         'Text_Size': 0.1
     }
-    __SIMULATE = True # Use mouse
     __T_BIRDtoTUBE = 15 # sec
-    __SHAPING = False
+    __FEEDBACK = {}
     
     # Game variables
-    __dThreshold = 0
     __BestScore = 0
 
     # Objects
@@ -117,12 +121,14 @@ class Engine:
                 tX, self.__STAGE['Floor_Height']))
 
         # Feedback
-        self.__STAGE['Threshold_Size'] = numpy.round([self.__STAGE['Threshold_Size'][i]*self.__Resolution[i] for i in range(0,len(self.__STAGE['Threshold_Size']))])
-        self.__Feedback = feedback.Converter(int(self.__Resolution[1]/2),21,self.__STAGE['Threshold_Size'][1]/2)        
+        self.__FEEDBACK['maxAct'] = int(self.__Resolution[1]/2)
+        self.__Feedback = feedback.Feedback(self.__FEEDBACK)
         # QC: feedback conversion
         # self.__Feedback.Show()
+        self.__STAGE['Threshold_Size'] = [numpy.round(self.__STAGE['Threshold_Size'][0]*self.__Resolution[0]),
+            2*self.__Feedback.getPlateauX()]
 
-        if self.__SIMULATE:
+        if self.__FEEDBACK['Simulate']:
             self.__Mouse = event.Mouse(win=self.__Window,visible=True)
             self.__Mouse.setPos([self.__STAGE['Threshold_Size'][0]/2-self.__Resolution[0]/2,0])
         else:
@@ -146,25 +152,18 @@ class Engine:
 
 
         # Feedback
-        if self.__SIMULATE:
-            act = self.__Mouse.getPos()[1]
+        dat = self.__Feedback.Value(self.__Mouse.getPos()[1])
+        if not(dat[1] is None): fbInfo['fbTime'], fbInfo['Activation'], fbInfo['fbVal'] = dat
 
-        fb = self.__Feedback.Transform(act-self.__dThreshold/2)
-        if fb > 0:
+        if fbInfo['fbVal'] > 0:
             if not(parameters['Speed']):
                 # Ensure T_BIRDtoTUBE adjust FPS if needed
                 parameters['Speed'] = int(numpy.ceil(self.__Resolution[0]/(2*self.__T_BIRDtoTUBE*self.FPS())))
                 self.__FrameDuration = self.__T_BIRDtoTUBE/(self.__Resolution[0]/(2*parameters['Speed']))
                 self.__BirdStart = [tFrame, parameters['frameNo']]
-            if self.__SHAPING:
-                self.__dThreshold = act
-                self.__Feedback.SetPlateau(self.__STAGE['Threshold_Size'][1]/2+self.__dThreshold/2)
-        elif fb < 0:
-            if self.__dThreshold: self.__Feedback.SetPlateau(self.__STAGE['Threshold_Size'][1]/2)
-            self.__dThreshold = 0
 
         # if not(numpy.mod(parameters.frameNo,120)): self.__Bird.JumpOnset = None # New Jump in every 2 second if above Threshold       
-        self.__Bird.Update(fb)
+        self.__Bird.Update(fbInfo['fbVal'])
 
         # Tubes
         for t in range(0,self.__STAGE['nTubes']):
@@ -176,12 +175,14 @@ class Engine:
 
         # Threshold
         rect = visual.Rect(win=self.__Window,lineColor='grey',fillColor='grey',
-            pos=[self.__STAGE['Threshold_Size'][0]/2-self.__Resolution[0]/2, self.__dThreshold/2],width=self.__STAGE['Threshold_Size'][0],height=self.__Feedback.getPlateauX()*2)
+            pos=[self.__STAGE['Threshold_Size'][0]/2-self.__Resolution[0]/2, 
+                self.__Feedback.getPlateauX()-self.__STAGE['Threshold_Size'][1]/2],
+                width=self.__STAGE['Threshold_Size'][0],height=self.__Feedback.getPlateauX()*2)
         rect.draw()
 
         # Activation
         rect = visual.Rect(win=self.__Window,lineColor='red',fillColor='red',
-            pos=[self.__STAGE['Threshold_Size'][0]/2-self.__Resolution[0]/2, act],width=self.__STAGE['Threshold_Size'][0],height=self.__Resolution[1]/100)
+            pos=[self.__STAGE['Threshold_Size'][0]/2-self.__Resolution[0]/2, fbInfo['Activation']],width=self.__STAGE['Threshold_Size'][0],height=self.__Resolution[1]/100)
         rect.draw()
         
         # Floor
@@ -189,7 +190,7 @@ class Engine:
         self.__Textures['Floor'].draw()
 
         # Score
-        self.__Textures['Info'].text = '{:.1f} --> {:d} | {:d}'.format(act,fb,self.Score())
+        self.__Textures['Info'].text = '{:3.1f} -> {:d} | {:d}'.format(fbInfo['Activation'],fbInfo['fbVal'],self.Score())
         self.__Textures['Info'].draw()
 
         self.__Window.flip()
@@ -243,7 +244,7 @@ class Engine:
         self.__SETTINGS['Initial']['BestScore'] = max(self.__BestScore, self.Score())
 
         with open(self.__SETTINGS['FileName'],'w') as config:
-            json.dump(self.__SETTINGS['Initial'],config)
+            json.dump(self.__SETTINGS['Initial'],config,indent=4)
 
 
 class TexClass:
@@ -300,13 +301,13 @@ class BirdClass(TexClass):
         if not(fb) and not(self.isJumping()): # Oscillate
             oY = numpy.sin(numpy.linspace(0, 2*numpy.pi, self.__Oscil_Resolution))* self._Resolution[1]*self.__Oscil_Amplitude
             oY = oY[int(numpy.mod(numpy.ceil(parameters['frameNo']*0.5*self.__FlapSpeed*self.__Oscil_toFlapRatio)-1,len(oY)))]
-            self.dY = 0
+            self.__dY = 0
             self.JumpOnset = None
         else:
             if fb > 0: # Jump
                 if not(self.isJumping()):
                     self.JumpOnset = parameters['frameNo']
-                    self.__dY = self._Resolution[1]*(self.Jump_Duration*parameters['FPS']()+1)*parameters['Gravity'] # -self._Resolution[1]*(self.Jump_Duration*parameters['FPS']()/2+1)*parameters['Gravity'] 
+                    self.__dY = self._Resolution[1]*(self.Jump_Duration*parameters['FPS']()+1)*parameters['Gravity'] # self._Resolution[1]*(self.Jump_Duration*parameters['FPS']()/2+1)*parameters['Gravity'] 
             elif fb < 0:
                 self.JumpOnset = None
 
