@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
     name='PyNF',
@@ -6,7 +6,7 @@ setup(
     author='Tibor Auer',
     author_email='tibor.auer@gmail.com',
     
-    packages=find_packages(),
+    packages=['pynf', 'pynf.flappybird'],
     install_requires=['numpy','scipy','matplotlib','pyniexp@git+https://github.com/tiborauer/pyniexp.git'],
     
     version='0.3.1',
