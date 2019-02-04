@@ -6,8 +6,7 @@ setup(
     author='Tibor Auer',
     author_email='tibor.auer@gmail.com',
     
-    packages=['pynf',
-              'pynf.flappybird'],
+    packages=find_packages(),
     install_requires=['numpy','scipy','matplotlib','pyniexp@git+https://github.com/tiborauer/pyniexp.git'],
     
     version='0.3.1',
