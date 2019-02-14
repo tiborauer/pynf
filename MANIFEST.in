@@ -1,0 +1,4 @@
+include LICENSE
+include README.md
+include pynf/flappybird/README.md
+include pynf/flappybird/sprites/*.png
