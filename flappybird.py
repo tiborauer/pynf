@@ -1,6 +1,6 @@
 from pynf.flappybird import game
 
-Game = game.Engine('settings.json')
+Game = game.Engine('flappybird.json')
 
 Game.InitWindow()
 

@@ -1,19 +1,17 @@
 {
     "DISPLAY": "BenQ BL3200PT:1:1200x900",
-    "DAYTIME": [
-        8,
-        19
-    ],
     "STAGE": {
         "Gravity": 1e-05,
         "Floor_Height": 0.1,
         "Floor_Cycle": 24,
         "nTubes": 1,
+        "Collision": 0,
         "Threshold_Size": [
             0.05
         ],
-        "Text_Size": 0.1
+        "Text_Size": 0.05
     },
+    "T_BIRDtoHalfScreen": 10,
     "FEEDBACK": {
         "IP": "127.0.0.1",
         "port": 1234,
@@ -23,8 +21,11 @@
         "steps": 21,
         "halfPlateau": 60,
         "Shaping": 0,
-        "Simulate": 1
+        "Simulate": 0
     },
-    "T_BIRDtoTUBE": 15,
-    "BestScore": 3    
+    "DESIGN": {
+        "conditionRegulate": "NF",
+        "conditionRest": "Bas"
+    },
+    "BestScore": 3
 }

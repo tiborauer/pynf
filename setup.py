@@ -10,7 +10,7 @@ setup(
     include_package_data=True,
     install_requires=['numpy','scipy','matplotlib','pyniexp@git+https://github.com/tiborauer/pyniexp.git'],
 	
-    version='0.4.2',
+    version='0.5.2',
     license='GPL-3.0',
     description='Python based games for neurofeedback training',
     

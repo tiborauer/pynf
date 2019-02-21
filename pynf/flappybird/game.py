@@ -24,16 +24,17 @@ class Engine:
     ## Private
     # Default parameters
     __DISPLAY = 'fullscreen'
-    __DAYTIME = [8, 19] # Daylight between 8 and 19:59
     __STAGE = { # sizes in proportion
         'Gravity': 1e-5,
         'Floor_Height': 0.1,
         'Floor_Cycle': 24, # length of pattern to repeat
         'nTubes': 2,
+        'Collision': False,
         'Threshold_Size': [0.05, 0.1],
         'Text_Size': 0.05
     }
-    __T_BIRDtoTUBE = 15 # sec
+    __T_BIRDtoHalfScreen = 15 # sec
+    __DESIGN = {}
     __FEEDBACK = {}
     
     # Game variables
@@ -93,12 +94,14 @@ class Engine:
         #glob.glob(os.path.join(os.path.dirname(os.path.realpath(__file__)),'sprites','*.png'))
         # Stage
         t = time.localtime()
-        im = Image.open(os.path.join(os.path.dirname(os.path.realpath(__file__)),'sprites','Background' + str((t.tm_hour < self.__DAYTIME[0] or t.tm_hour > self.__DAYTIME[1])+1) + '.png'))
-        mag = self.__Resolution[1]/im.size[1]
-        im = im.resize((int(mag*im.size[0]), int(mag*im.size[1])),Image.BICUBIC)
-        CData = numpy.tile(numpy.array(im)/255*2-1,(1,int(numpy.ceil(self.__Resolution[0]/im.size[0])),1))
-        self.__Textures['Background'] = visual.ImageStim(self.__Window,image=CData,flipVert=True,size=self.__Resolution,units='pix')
-
+        imList = [Image.open(f) for f in glob.glob(os.path.join(os.path.dirname(os.path.realpath(__file__)),'sprites','Background*.png'))]
+        mag = self.__Resolution[1]/imList[0].size[1]
+        tex = list()
+        for i in range(0,len(imList)):
+            im = imList[i].resize((int(mag*imList[i].size[0]), int(mag*imList[i].size[1])),Image.BICUBIC)
+            CData = numpy.tile(numpy.array(im)/255*2-1,(1,int(numpy.ceil(self.__Resolution[0]/im.size[0])),1))
+            tex.append(visual.ImageStim(self.__Window,image=CData,flipVert=True,size=self.__Resolution,units='pix'))
+        self.__Textures['Background'] = tex
 
         im = Image.open(os.path.join(os.path.dirname(os.path.realpath(__file__)),'sprites','Floor.png'))
         self.__STAGE['Floor_Height'] = numpy.ceil(self.__Resolution[1]*self.__STAGE['Floor_Height'])
@@ -148,21 +151,28 @@ class Engine:
         tFrame = self.Clock()
         parameters['frameNo'] += 1
 
-        # Background
-        self.__Textures['Background'].draw()
-
-
         # Feedback
-        dat = self.__Feedback.Value(self.__Mouse.getPos()[1])
+        dat = self.__Feedback.Value(float(self.__Mouse.getPos()[1]))
         if type(dat[1]) == str: parameters['condition'] = dat[1]
         if not(dat[2] is None): fbInfo['fbTime'], fbInfo['Activation'], fbInfo['fbVal'] = dat
 
-        if fbInfo['fbVal'] > 0:
-            if not(parameters['Speed']):
-                # Ensure T_BIRDtoTUBE adjust FPS if needed
-                parameters['Speed'] = int(numpy.ceil(self.__Resolution[0]/(2*self.__T_BIRDtoTUBE*self.FPS())))
-                self.__FrameDuration = self.__T_BIRDtoTUBE/(self.__Resolution[0]/(2*parameters['Speed']))
-                self.__BirdStart = [tFrame, parameters['frameNo']]
+        bgInd = 0
+        if len(parameters['condition']) > 0:
+            if parameters['condition'] == self.__DESIGN['conditionRest']:       # rest
+                bgInd = 0
+                for t in range(0,self.__STAGE['nTubes']):                       # reset tubes
+                    self.__Tubes[t].XY[0] = self.__Resolution[0]/2+self.__Tubes[t].Size[0]/2 + t*numpy.round(self.__Resolution[0]/self.__STAGE['nTubes'])
+
+            elif parameters['condition'] == self.__DESIGN['conditionRegulate']: # regulate
+                bgInd = 1
+                if not(parameters['Speed']):
+                    # Ensure T_BIRDtoHalfScreen adjust FPS if needed
+                    parameters['Speed'] = int(numpy.ceil(self.__Resolution[0]/(2*self.__T_BIRDtoHalfScreen*self.FPS())))
+                    self.__FrameDuration = self.__T_BIRDtoHalfScreen/(self.__Resolution[0]/(2*parameters['Speed']))
+                    self.__BirdStart = [tFrame, parameters['frameNo']]
+        
+        # Background
+        self.__Textures['Background'][bgInd].draw()
 
         # if not(numpy.mod(parameters.frameNo,120)): self.__Bird.JumpOnset = None # New Jump in every 2 second if above Threshold       
         self.__Bird.Update(fbInfo['fbVal'])
@@ -205,11 +215,12 @@ class Engine:
         val = False
 
         # Collision
-        tubesInProximity = [self.__Bird.XY[0]+self.__Bird.Size[0]/2 >= tube.XY[0]-tube.Size[0]/2 and self.__Bird.XY[0]-self.__Bird.Size[0]/2 <=  tube.XY[0]+tube.Size[0]/2 for tube in self.__Tubes]
-        if any(tubesInProximity):
-            t = [t for t in range(0,self.__STAGE['nTubes']) if tubesInProximity[t]][0]
-            val = (self.__Bird.XY[1]+self.__Bird.Size[1]/2 >= self.__Tubes[t].GapRange[0]) or (self.__Bird.XY[1]-self.__Bird.Size[1]/2 <= self.__Tubes[t].GapRange[1])
-            # QC: print('{}-{}: {}-{}'.format(self.__Bird.XY[1],self.__Bird.Size[1]/2,self.__Tubes[t].GapRange[0],self.__Tubes[t].GapRange[1]))
+        if self.__STAGE['Collision']:
+            tubesInProximity = [self.__Bird.XY[0]+self.__Bird.Size[0]/2 >= tube.XY[0]-tube.Size[0]/2 and self.__Bird.XY[0]-self.__Bird.Size[0]/2 <=  tube.XY[0]+tube.Size[0]/2 for tube in self.__Tubes]
+            if any(tubesInProximity):
+                t = [t for t in range(0,self.__STAGE['nTubes']) if tubesInProximity[t]][0]
+                val = (self.__Bird.XY[1]+self.__Bird.Size[1]/2 >= self.__Tubes[t].GapRange[0]) or (self.__Bird.XY[1]-self.__Bird.Size[1]/2 <= self.__Tubes[t].GapRange[1])
+                # QC: print('{}-{}: {}-{}'.format(self.__Bird.XY[1],self.__Bird.Size[1]/2,self.__Tubes[t].GapRange[0],self.__Tubes[t].GapRange[1]))
         
         # Fall
         val = val or (self.__Bird.XY[1] - self.__Bird.Size[1]/2 <= self.__STAGE['Floor_Height']-self.__Resolution[1]/2) 
@@ -275,9 +286,8 @@ class BirdClass(TexClass):
     __dY = 0
 
     __FlapSpeed = 0.1
-        
-    __Oscil_Resolution = 45
     __Oscil_Amplitude = 0.02
+    __Oscil_Resolution = 45
     __Oscil_toFlapRatio = 8
     
     __Angle_toSpeed = 30
@@ -326,15 +336,12 @@ class BirdClass(TexClass):
 
 
 class TubeClass(TexClass):
-
-    Size = [0.1]
-    GapRange = [0, 0]
-
-    __Gap = [0, 0]
     __Max_VOffset = 1 # relative to gap, also a jitter between re-occurences of tubes
-    
+
     def __init__(self,w,pngs,gap,posX,floorY):
         super().__init__(w)
+
+        self.Size = [0.1]
 
         self.__Gap = gap
         self.__Max_VOffset = self.__Max_VOffset*self.__Gap
@@ -359,7 +366,7 @@ class TubeClass(TexClass):
         CData.paste(im[1],(0,ext+im[0].size[1]+self.__Gap))
 
         self.Size = list(CData.size)
-        self.XY = [self._Resolution[0]/2+self.Size[0]/2,random.randint(0,self.__Max_VOffset)]
+        self.XY = [self._Resolution[0]/2+self.Size[0]/2+posX,random.randint(0,self.__Max_VOffset)]
         self._Textures = visual.ImageStim(self._Window,CData,size=self.Size,pos=self.XY,units='pix')
         self.GapRange = [self.XY[1]+self.__Gap/2, self.XY[1]-self.__Gap/2]
     
