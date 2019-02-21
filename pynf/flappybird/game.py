@@ -9,6 +9,7 @@ parameters = {
     'Speed': 0,
     'frameNo': 0,
     'FPS': None,
+    'condition': '',
     'nTubesPassed': 0
 }
 
@@ -30,7 +31,7 @@ class Engine:
         'Floor_Cycle': 24, # length of pattern to repeat
         'nTubes': 2,
         'Threshold_Size': [0.05, 0.1],
-        'Text_Size': 0.1
+        'Text_Size': 0.05
     }
     __T_BIRDtoTUBE = 15 # sec
     __FEEDBACK = {}
@@ -153,7 +154,8 @@ class Engine:
 
         # Feedback
         dat = self.__Feedback.Value(self.__Mouse.getPos()[1])
-        if not(dat[1] is None): fbInfo['fbTime'], fbInfo['Activation'], fbInfo['fbVal'] = dat
+        if type(dat[1]) == str: parameters['condition'] = dat[1]
+        if not(dat[2] is None): fbInfo['fbTime'], fbInfo['Activation'], fbInfo['fbVal'] = dat
 
         if fbInfo['fbVal'] > 0:
             if not(parameters['Speed']):
@@ -189,8 +191,8 @@ class Engine:
         self.__Textures['Floor'].pos = [-numpy.mod(parameters['frameNo']*parameters['Speed'], self.__STAGE['Floor_Cycle']), self.__Textures['Floor'].pos[1]]
         self.__Textures['Floor'].draw()
 
-        # Score
-        self.__Textures['Info'].text = '{:3.1f} -> {:d} | {:d}'.format(fbInfo['Activation'],fbInfo['fbVal'],self.Score())
+        # Info
+        self.__Textures['Info'].text = '{}: {:3.1f} -> {:d} | {:d}'.format(parameters['condition'],fbInfo['Activation'],fbInfo['fbVal'],self.Score())
         self.__Textures['Info'].draw()
 
         self.__Window.flip()

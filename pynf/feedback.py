@@ -110,16 +110,16 @@ class Feedback(Converter,Receiver):
         t = None; val = None
 
         if not(self.Simulate): t, act = self.Signal()
-        if not(act is None):
+        if type(act) == float:
             val = self.Transform(act-self.dThreshold/2)
         
-        if self.Shaping:
-            if val > 0:
-                self.dThreshold = act
-                self.halfPlateau = self.__halfPlateau0 + self.dThreshold/2
-            elif val < 0:
-                self.dThreshold = 0
-                if self.halfPlateau != self.__halfPlateau0: self.halfPlateau = self.__halfPlateau0
+            if self.Shaping:
+                if val > 0:
+                    self.dThreshold = act
+                    self.halfPlateau = self.__halfPlateau0 + self.dThreshold/2
+                elif val < 0:
+                    self.dThreshold = 0
+                    if self.halfPlateau != self.__halfPlateau0: self.halfPlateau = self.__halfPlateau0
         
         return t, act, val
 
