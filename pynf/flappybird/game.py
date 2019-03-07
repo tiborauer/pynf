@@ -125,14 +125,14 @@ class Engine:
                 tX, self.__STAGE['Floor_Height']))
 
         # Feedback
-        self.__FEEDBACK['maxAct'] = int(self.__Resolution[1]/2)
+        self.__FEEDBACK['max_act'] = int(self.__Resolution[1]/2)
         self.__Feedback = feedback.Feedback(self.__FEEDBACK)
         # QC: feedback conversion
-        # self.__Feedback.Show()
+        # self.__Feedback.show()
         self.__STAGE['Threshold_Size'] = [numpy.round(self.__STAGE['Threshold_Size'][0]*self.__Resolution[0]),
-            2*self.__Feedback.getPlateauX()]
+            2*self.__Feedback.get_plateau_X()]
 
-        if self.__FEEDBACK['Simulate']:
+        if self.__FEEDBACK['simulate']:
             self.__Mouse = event.Mouse(win=self.__Window,visible=True)
             self.__Mouse.setPos([self.__STAGE['Threshold_Size'][0]/2-self.__Resolution[0]/2,0])
         else:
@@ -152,7 +152,7 @@ class Engine:
         parameters['frameNo'] += 1
 
         # Feedback
-        dat = self.__Feedback.Value(float(self.__Mouse.getPos()[1]))
+        dat = self.__Feedback.value(float(self.__Mouse.getPos()[1]))
         if type(dat[1]) == str: parameters['condition'] = dat[1]
         if not(dat[2] is None): fbInfo['fbTime'], fbInfo['Activation'], fbInfo['fbVal'] = dat
 
@@ -188,8 +188,8 @@ class Engine:
         # Threshold
         rect = visual.Rect(win=self.__Window,lineColor='grey',fillColor='grey',
             pos=[self.__STAGE['Threshold_Size'][0]/2-self.__Resolution[0]/2, 
-                self.__Feedback.getPlateauX()-self.__STAGE['Threshold_Size'][1]/2],
-                width=self.__STAGE['Threshold_Size'][0],height=self.__Feedback.getPlateauX()*2)
+                self.__Feedback.get_plateau_X()-self.__STAGE['Threshold_Size'][1]/2],
+                width=self.__STAGE['Threshold_Size'][0],height=self.__Feedback.get_plateau_X()*2)
         rect.draw()
 
         # Activation

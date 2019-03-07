@@ -1,5 +1,5 @@
 {
-    "DISPLAY": "BenQ BL3200PT:1:1200x900",
+    "DISPLAY": "Monitor:1:1200x900",
     "STAGE": {
         "Gravity": 1e-05,
         "Floor_Height": 0.1,
