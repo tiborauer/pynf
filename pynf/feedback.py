@@ -7,68 +7,68 @@ class Receiver(connection.Udp):
 
     def __init__(self,IP='127.0.0.1',port=1234,encoding='UTF-8',controlChar='#',**args):
         super().__init__()
-        self.ConnectForReceiving()
-        self.sendTimeStamp = True
+        self.connect_for_receiving()
+        self.sending_time_stamp = True
     
-    def Signal(self):
-        if self.isOpen and self.ReadytoReceive(): return self.ReceiveData(n=1,dtype='float')
+    def signal(self):
+        if self.is_open and self.ready_to_receive(): return self.receive_data(n=1,dtype='float')
         else: return None, None
 
 
 class Converter:
 
-    MaxAct = 100
-    Steps = 21
-    __halfPlateau = 20
+    max_act = 100
+    steps = 21
+    __half_plateau = 20
 
     @property
-    def halfPlateau(self):
-        return self.__halfPlateau
+    def half_plateau(self):
+        return self.__half_plateau
 
-    @halfPlateau.setter
-    def halfPlateau(self,val):
-        self.__halfPlateau = val
-        self.Calibrate()
+    @half_plateau.setter
+    def half_plateau(self,val):
+        self.__half_plateau = val
+        self.calibrate()
 
-    __Slope = 0
-    __Distance = 0   # Distance between slopes
+    __slope = 0
+    __distance = 0   # distance between slopes
 
-    def __init__(self,maxAct=100,steps=21,halfPlateau=20,**args):
-        self.MaxAct = maxAct
-        self.Steps = steps
-        self.halfPlateau = halfPlateau
+    def __init__(self,max_act=100,steps=21,half_plateau=20,**args):
+        self.max_act = max_act
+        self.steps = steps
+        self.half_plateau = half_plateau
         
-    def Calibrate(self):
+    def calibrate(self):
         # Initial
-        self.__Distance = self.MaxAct + self.halfPlateau
+        self.__distance = self.max_act + self.half_plateau
 
         # Iteration
         # - ensure that fun(minimum) is rounded to minval
         sl = 0
-        while self.__cost_Slope(sl): sl += 1e-4
+        while self.__cost_slope(sl): sl += 1e-4
     
         # - ensure plateau is not larger than specified
-        self.__Distance = opt.fminbound(self.__cost_Distance, self.MaxAct/2, self.MaxAct*2, args=tuple([self.halfPlateau]))
+        self.__distance = opt.fminbound(self.__cost_distance, self.max_act/2, self.max_act*2, args=tuple([self.half_plateau]))
 
-    def Transform(self,act):
-        return int(numpy.round((self.Steps-1)/2*self.Functor(act)))
+    def transform(self,act):
+        return int(numpy.round((self.steps-1)/2*self.functor(act)))
 
-    def Functor(self,x):
-        return -1/(1+numpy.exp(self.__Slope*(x-(0-self.__Distance/2))))+1/(1+numpy.exp(-self.__Slope*(x-(0+self.__Distance/2))))
+    def functor(self,x):
+        return -1/(1+numpy.exp(self.__slope*(x-(0-self.__distance/2))))+1/(1+numpy.exp(-self.__slope*(x-(0+self.__distance/2))))
 
-    def getPlateauX(self):
-        for x in range(0,self.MaxAct+1):
-            if numpy.round((self.Steps-1)/2*self.Functor(x)) > 0: break
+    def get_plateau_X(self):
+        for x in range(0,self.max_act+1):
+            if numpy.round((self.steps-1)/2*self.functor(x)) > 0: break
         return x - 1
 
-    def Show(self):
-        act = numpy.arange(-self.MaxAct,self.MaxAct,1)
-        y1 = [self.Functor(a) for a in act]
-        y2 = [self.Transform(a) for a in act]
+    def show(self):
+        act = numpy.arange(-self.max_act,self.max_act,1)
+        y1 = [self.functor(a) for a in act]
+        y2 = [self.transform(a) for a in act]
         fig, ax = plt.subplots(2,1,sharex=True)
         ax[0].plot(act, y1, label='Functor(act)')
         ax[0].set(xlabel='activation (au.)', ylabel='feedback',
-            title='MaxAct={}, Steps={}, halfPlateau={}'.format(self.MaxAct,self.Steps,self.halfPlateau))
+            title='max_act={}, steps={}, half_plateau={}'.format(self.max_act,self.steps,self.half_plateau))
         ax[0].grid()
         ax[0].legend()
 
@@ -79,49 +79,49 @@ class Converter:
 
         plt.show()
 
-    def __cost_Slope(self,slope):
-        self.__Slope = slope
-        return abs(numpy.round((self.Steps-1)/2*self.Functor(-self.MaxAct)) - -(self.Steps-1)/2)
+    def __cost_slope(self,slope):
+        self.__slope = slope
+        return abs(numpy.round((self.steps-1)/2*self.functor(-self.max_act)) - -(self.steps-1)/2)
 
-    def __cost_Distance(self,dist,halfPlateau):
-        self.__Distance = dist
-        return abs(self.getPlateauX() - halfPlateau)
+    def __cost_distance(self,dist,half_plateau):
+        self.__distance = dist
+        return abs(self.get_plateau_X() - half_plateau)
     
     
 class Feedback(Converter,Receiver):
-    Simulate = True
-    Shaping = True
-    dThreshold = 0
-    __halfPlateau0 = 0
+    simulate = True
+    shaping = True
+    d_threshold = 0
+    __half_plateau0 = 0
 
     def __init__(self,config):
         if type(config) == str:
             with open(config) as configfid:
                 config = json.load(configfid)['FEEDBACK']
         
-        self.__halfPlateau0 = config['halfPlateau']
-        self.Simulate = config['Simulate'] == True
-        self.Shaping = config['Shaping'] == True
+        self.__half_plateau0 = config['half_plateau']
+        self.simulate = config['simulate'] == True
+        self.shaping = config['shaping'] == True
 
         Converter.__init__(self,**config)
-        if not(self.Simulate): Receiver.__init__(self,**config)
+        if not(self.simulate): Receiver.__init__(self,**config)
 
-    def Value(self,act=None):
+    def value(self,act=None):
         t = None; val = None
 
-        if not(self.Simulate): t, act = self.Signal()
+        if not(self.simulate): t, act = self.signal()
         if type(act) == float:
-            val = self.Transform(act-self.dThreshold/2)
+            val = self.transform(act-self.d_threshold/2)
         
-            if self.Shaping:
+            if self.shaping:
                 if val > 0:
-                    self.dThreshold = act
-                    self.halfPlateau = self.__halfPlateau0 + self.dThreshold/2
+                    self.d_threshold = act
+                    self.half_plateau = self.__half_plateau0 + self.d_threshold/2
                 elif val < 0:
-                    self.dThreshold = 0
-                    if self.halfPlateau != self.__halfPlateau0: self.halfPlateau = self.__halfPlateau0
+                    self.d_threshold = 0
+                    if self.half_plateau != self.__half_plateau0: self.half_plateau = self.__half_plateau0
         
         return t, act, val
 
 #fb = Converter()
-#fb.Show()
+#fb.show()
