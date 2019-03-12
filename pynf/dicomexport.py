@@ -134,7 +134,7 @@ class TcpDicom(Tcp):
         
         # Image
         if len(img) and self.header.is_ready_for_parsing:
-            dat = numpy.zeros(self.header.Dimensions)
+            dat = numpy.empty(self.header.Dimensions,dtype=int)
             mosaic = numpy.array(img).reshape(self.header.Columns,self.header.Rows)
             num_mosaic = numpy.ceil(numpy.sqrt(self.header.Dimensions[2]))
             for s in range(0,self.header.Dimensions[2]):
