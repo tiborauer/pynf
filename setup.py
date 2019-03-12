@@ -8,9 +8,9 @@ setup(
     
     packages=['pynf', 'pynf.flappybird'],
     include_package_data=True,
-    install_requires=['numpy','scipy','matplotlib','pyniexp@git+https://github.com/tiborauer/pyniexp.git'],
+    install_requires=['numpy','scipy','matplotlib','pydicom','pyniexp@git+https://github.com/tiborauer/pyniexp.git'],
 	
-    version='0.6.2',
+    version='0.7.2',
     license='GPL-3.0',
     description='Python based games for neurofeedback training',
     
