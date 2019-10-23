@@ -6,7 +6,7 @@ from pyniexp import connection
 class Receiver(connection.Udp):
 
     def __init__(self,IP='127.0.0.1',port=1234,encoding='UTF-8',controlChar='#',**args):
-        super().__init__()
+        super().__init__(IP=IP,port=port,encoding=encoding,control_signal=controlChar)
         self.connect_for_receiving()
         self.sending_time_stamp = True
     
