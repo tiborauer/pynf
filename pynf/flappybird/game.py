@@ -89,7 +89,7 @@ class Engine:
         if ind > 0:
             posX = posX + ScreenSize[0]*(ind-1)
 
-        self.__Window = visual.Window(size=self.__Resolution,pos=(posX,posY),units='pix',monitor=scr,fullscr=doFullscreen,winType='pyglet')
+        self.__Window = visual.Window(size=self.__Resolution,pos=(posX,posY),units='pix',monitor=scr,fullscr=doFullscreen,winType='pyglet',gammaErrorPolicy='ignore')
 
         #glob.glob(os.path.join(os.path.dirname(os.path.realpath(__file__)),'sprites','*.png'))
         # Stage
