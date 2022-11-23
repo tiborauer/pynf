@@ -1,0 +1,19 @@
+{
+  "creators": [
+    {
+      "affiliation": "University of Surrey",
+      "name": "Auer, Tibor",
+      "orcid": "0000-0001-5153-1424"
+    }
+  ],
+  "keywords": [
+    "neuroimaging",
+    "neurofeedback",
+    "python",
+    "real-time export",
+    "flappy bird"
+  ],
+   "license": "MIT", 
+   "upload_type": "software", 
+   "access_right": "open"
+}
