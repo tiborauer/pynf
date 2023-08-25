@@ -1,5 +1,5 @@
 {
-    "DISPLAY": "Monitor:1:1200x900",
+    "DISPLAY": "Monitor:0:1200x900",
     "STAGE": {
         "Gravity": 1e-05,
         "Floor_Height": 0.1,
@@ -21,11 +21,12 @@
         "steps": 21,
         "half_plateau": 60,
         "shaping": 0,
-        "simulate": 0
+        "simulate": 1
     },
     "DESIGN": {
-        "conditionRegulate": "NF",
-        "conditionRest": "Bas"
+        "conditionRegulate": "NFBREG",
+        "conditionDisplay": "NFBDISP",
+        "conditionRest": "BAS"
     },
     "BestScore": 3
 }

@@ -111,8 +111,9 @@ class Engine:
         self.__STAGE['Floor_Cycle'] *= mag
         self.__Textures['Floor'] = visual.ImageStim(self.__Window,image=CData,flipVert=True,size=[CData.shape[1],CData.shape[0]],pos=[0,self.__STAGE['Floor_Height']/2-self.__Resolution[1]/2],units='pix')
 
-        self.__STAGE['Text_Size'] *= self.__Resolution[1]
-        self.__Textures['Info'] = visual.TextStim(self.__Window,text='',font='Calibri',height=self.__STAGE['Text_Size'],wrapWidth=self.__Resolution[0],bold=True,color=(-1,-1,-1),pos=[0,self.__STAGE['Text_Size']/2-self.__Resolution[1]/2],units='pix')
+        if self.__STAGE['Text_Size'] > 0:
+            self.__STAGE['Text_Size'] *= self.__Resolution[1]
+            self.__Textures['Info'] = visual.TextStim(self.__Window,text='',font='Calibri',height=self.__STAGE['Text_Size'],wrapWidth=self.__Resolution[0],bold=True,color=(-1,-1,-1),pos=[0,self.__STAGE['Text_Size']/2-self.__Resolution[1]/2],units='pix')
 
         # Bird
         self.__Bird = BirdClass(self.__Window,glob.glob(os.path.join(os.path.dirname(os.path.realpath(__file__)),'sprites','Bird*.png')))
@@ -163,7 +164,7 @@ class Engine:
                 for t in range(0,self.__STAGE['nTubes']):                       # reset tubes
                     self.__Tubes[t].XY[0] = self.__Resolution[0]/2+self.__Tubes[t].Size[0]/2 + t*numpy.round(self.__Resolution[0]/self.__STAGE['nTubes'])
 
-            elif parameters['condition'] == self.__DESIGN['conditionRegulate']: # regulate
+            elif parameters['condition'] == self.__DESIGN['conditionRegulate'] or parameters['condition'] == self.__DESIGN['conditionDisplay']: # regulate
                 bgInd = 1
                 if not(parameters['Speed']):
                     # Ensure T_BIRDtoHalfScreen adjust FPS if needed
@@ -202,8 +203,9 @@ class Engine:
         self.__Textures['Floor'].draw()
 
         # Info
-        self.__Textures['Info'].text = '{}: {:3.1f} -> {:d} | {:d}'.format(parameters['condition'],fbInfo['Activation'],fbInfo['fbVal'],self.Score())
-        self.__Textures['Info'].draw()
+        if 'Info' in self.__Textures:
+            self.__Textures['Info'].text = '{}: {:3.1f} -> {:d} | {:d}'.format(parameters['condition'],fbInfo['Activation'],fbInfo['fbVal'],self.Score())
+            self.__Textures['Info'].draw()
 
         self.__Window.flip()
         # Adjust FPS
